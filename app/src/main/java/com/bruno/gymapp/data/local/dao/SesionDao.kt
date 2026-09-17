@@ -13,6 +13,9 @@ interface SesionDao {
     @Insert
     suspend fun insertar(sesion: Sesion): Long
 
+    @Query("SELECT * FROM sesiones WHERE duracionMinutos IS NULL ORDER BY fechaEpochMillis DESC LIMIT 1")
+    fun observarSesionEnCurso(): Flow<Sesion?>
+
     @Update
     suspend fun actualizar(sesion: Sesion)
 }

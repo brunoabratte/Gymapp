@@ -1,10 +1,43 @@
-*.iml
-.gradle
-/local.properties
-/.idea
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+**/build/
+.gradle/
+.idea/
 local.properties
+.kotlin/
+.cxx/
+
+# Gradle
+.gradle/
+build/
+**/build/
+
+# Android Studio
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Local configuration
+local.properties
+
+# Kotlin
+.kotlin/
+
+# CMake / native
+.cxx/
+.externalNativeBuild/
+
+# Generated files
+captures/
+.externalNativeBuild/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# APKs
+*.apk
+*.aab
+
+# Keystore
+*.jks
+*.keystore

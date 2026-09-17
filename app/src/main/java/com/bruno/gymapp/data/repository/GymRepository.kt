@@ -1,6 +1,7 @@
 package com.bruno.gymapp.data.repository
 
 import com.bruno.gymapp.data.local.AppDatabase
+import com.bruno.gymapp.data.local.dao.ConteoPorSesion
 import com.bruno.gymapp.data.local.dao.PuntoProgreso
 import com.bruno.gymapp.data.local.entity.Ejercicio
 import com.bruno.gymapp.data.local.entity.Sesion
@@ -20,10 +21,12 @@ class GymRepository(db: AppDatabase) {
 
     fun observarSesiones(): Flow<List<Sesion>> = sesionDao.observarTodas()
 
-    suspend fun iniciarSesion(fechaEpochMillis: Long): Long =
-        sesionDao.insertar(Sesion(fechaEpochMillis = fechaEpochMillis))
+    suspend fun iniciarSesion(fechaEpochMillis: Long, nombrePlan: String = "Entrenamiento libre", planId: String = "libre"): Long =
+        sesionDao.insertar(Sesion(fechaEpochMillis = fechaEpochMillis, nombrePlan = nombrePlan, planId = planId))
 
     suspend fun finalizarSesion(sesion: Sesion) = sesionDao.actualizar(sesion)
+
+    fun observarSesionEnCurso(): Flow<Sesion?> = sesionDao.observarSesionEnCurso()
 
     suspend fun registrarSerie(serie: SerieRegistrada): Long = serieDao.insertar(serie)
 
@@ -32,4 +35,9 @@ class GymRepository(db: AppDatabase) {
 
     fun observarProgreso(ejercicioId: Long): Flow<List<PuntoProgreso>> =
         serieDao.observarProgreso(ejercicioId)
+
+    fun observarConteoPorSesion(): Flow<List<ConteoPorSesion>> =
+        serieDao.observarConteoPorSesion()
+
+    fun observarCantidadTotalSeries(): Flow<Int> = serieDao.observarCantidadTotal()
 }

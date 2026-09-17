@@ -11,6 +11,12 @@ data class PuntoProgreso(
     val repeticiones: Int
 )
 
+// Cantidad de series cargadas por sesión, para mostrar en el historial sin abrir cada una
+data class ConteoPorSesion(
+    val sesionId: Long,
+    val cantidad: Int
+)
+
 @Dao
 interface SerieDao {
 
@@ -32,4 +38,17 @@ interface SerieDao {
         """
     )
     fun observarProgreso(ejercicioId: Long): Flow<List<PuntoProgreso>>
+
+    // Para el historial: cuántas series se cargaron en cada sesión
+    @Query(
+        """
+        SELECT sesionId, COUNT(*) AS cantidad
+        FROM series_registradas
+        GROUP BY sesionId
+        """
+    )
+    @Query("SELECT COUNT(*) FROM series_registradas")
+    fun observarCantidadTotal(): Flow<Int>
+
+    fun observarConteoPorSesion(): Flow<List<ConteoPorSesion>>
 }
