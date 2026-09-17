@@ -1,5 +1,10 @@
 package com.bruno.gymapp.data.local.entity
 
+import androidx.compose.runtime.Immutable
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+
+@Immutable
 data class PlanPreconfigurado(
     val id: String,
     val nombre: String,
@@ -7,8 +12,39 @@ data class PlanPreconfigurado(
     val descansoCompuesto: Int,
     val descansoBasico: Int,
     val descansoAislamiento: Int,
-    val ejercicios: List<String>
+    val ejercicios: ImmutableList<String>
 )
+
+@Immutable
+data class PrescripcionEjercicio(
+    val series: Int,
+    val repeticiones: String,
+    val objetivo: String
+)
+
+fun PlanPreconfigurado.prescripcionPara(tipo: TipoEjercicio): PrescripcionEjercicio {
+    return when (id) {
+        "fuerza" -> when (tipo) {
+            TipoEjercicio.COMPUESTO -> PrescripcionEjercicio(4, "3-6", "Fuerza y técnica")
+            TipoEjercicio.BASICO -> PrescripcionEjercicio(3, "5-8", "Fuerza controlada")
+            else -> PrescripcionEjercicio(3, "8-12", "Accesorio")
+        }
+        "full_body" -> when (tipo) {
+            TipoEjercicio.COMPUESTO -> PrescripcionEjercicio(3, "6-10", "Fuerza e hipertrofia")
+            else -> PrescripcionEjercicio(3, "10-15", "Volumen moderado")
+        }
+        "torso_pierna", "cardio" -> when (tipo) {
+            TipoEjercicio.COMPUESTO -> PrescripcionEjercicio(4, "6-10", "Volumen por patrón")
+            else -> PrescripcionEjercicio(3, "10-15", "Volumen por músculo")
+        }
+        else -> when (tipo) {
+            TipoEjercicio.COMPUESTO -> PrescripcionEjercicio(4, "6-10", "Hipertrofia")
+            TipoEjercicio.BASICO -> PrescripcionEjercicio(3, "8-12", "Hipertrofia")
+            TipoEjercicio.AISLAMIENTO -> PrescripcionEjercicio(3, "10-15", "Hipertrofia")
+            TipoEjercicio.CARDIO -> PrescripcionEjercicio(3, "10-20 min", "Condición")
+        }
+    }
+}
 
 object PlanesPreconfigurados {
     val todos = listOf(
@@ -19,7 +55,7 @@ object PlanesPreconfigurados {
             descansoCompuesto = 150,
             descansoBasico = 90,
             descansoAislamiento = 60,
-            ejercicios = listOf("Sentadilla", "Press de banca", "Remo con barra", "Press militar", "Curl de bíceps", "Extensión de tríceps", "Plancha")
+            ejercicios = persistentListOf("Sentadilla", "Press de banca", "Remo con barra", "Press militar", "Curl de bíceps", "Extensión de tríceps", "Plancha")
         ),
         PlanPreconfigurado(
             id = "hipertrofia",
@@ -28,7 +64,7 @@ object PlanesPreconfigurados {
             descansoCompuesto = 120,
             descansoBasico = 90,
             descansoAislamiento = 60,
-            ejercicios = listOf("Press de banca", "Press inclinado", "Remo con barra", "Jalón al pecho", "Press militar", "Curl de bíceps", "Extensión de tríceps")
+            ejercicios = persistentListOf("Press de banca", "Press inclinado", "Remo con barra", "Jalón al pecho", "Press militar", "Curl de bíceps", "Extensión de tríceps")
         ),
         PlanPreconfigurado(
             id = "fuerza",
@@ -37,18 +73,19 @@ object PlanesPreconfigurados {
             descansoCompuesto = 180,
             descansoBasico = 120,
             descansoAislamiento = 90,
-            ejercicios = listOf("Sentadilla", "Press de banca", "Peso muerto", "Press militar", "Dominadas")
+            ejercicios = persistentListOf("Sentadilla", "Press de banca", "Peso muerto", "Press militar", "Dominadas")
         ),
         PlanPreconfigurado(
-            id = "torso_pierna",
-            nombre = "Torso / Pierna",
-            descripcion = "Alternativa simple para dividir el entrenamiento por zonas.",
+            id = "cardio",
+            nombre = "Cardio",
+            descripcion = "Plan progresivo de capacidad aeróbica y acondicionamiento general.",
             descansoCompuesto = 150,
             descansoBasico = 90,
             descansoAislamiento = 60,
-            ejercicios = listOf("Press de banca", "Dominadas", "Remo con barra", "Press militar", "Sentadilla", "Peso muerto", "Curl de bíceps", "Extensión de tríceps")
+            ejercicios = persistentListOf("Caminata inclinada", "Bicicleta", "Remo ergómetro", "Plancha")
         )
     )
 
-    fun porId(id: String): PlanPreconfigurado = todos.firstOrNull { it.id == id } ?: todos.first()
+    fun porId(id: String): PlanPreconfigurado = todos.firstOrNull { it.id == id }
+        ?: if (id == "torso_pierna") todos.first { it.id == "cardio" } else todos.first()
 }

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class HistorialDetalleViewModel(
@@ -36,14 +37,14 @@ class HistorialDetalleViewModel(
 
     // La sesión ya haya sido finalizada o no, siempre se puede corregir una serie cargada por error.
     fun editarSerie(serieId: Long, pesoKg: Double, repeticiones: Int) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val original = seriesCrudas.value.find { it.id == serieId } ?: return@launch
             repo.actualizarSerie(original.copy(pesoKg = pesoKg, repeticiones = repeticiones))
         }
     }
 
     fun eliminarSerie(serieId: Long) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val original = seriesCrudas.value.find { it.id == serieId } ?: return@launch
             repo.eliminarSerie(original)
         }

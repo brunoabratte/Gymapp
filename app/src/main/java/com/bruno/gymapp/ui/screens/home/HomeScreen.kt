@@ -2,6 +2,8 @@ package com.bruno.gymapp.ui.screens.home
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -60,15 +62,34 @@ fun HomeScreen(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState())
+                .imePadding()
+                .navigationBarsPadding(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text("Hola 👋", style = MaterialTheme.typography.headlineMedium)
             Text(fecha, style = MaterialTheme.typography.bodyMedium)
             if (activa != null) {
-                Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(18.dp)) { Text("Entrenamiento en curso", style = MaterialTheme.typography.titleLarge); Text(activa.nombrePlan); Spacer(Modifier.height(10.dp)); Button(onClick = { onContinuar(activa.id, activa.planId) }, Modifier.fillMaxWidth()) { Text("Continuar entrenamiento") } } }
-            } else if (!configurado || planDeHoy.isBlank()) {
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(18.dp)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Entrenamiento en curso", style = MaterialTheme.typography.titleLarge)
+                                Text(activa.nombrePlan)
+                            }
+                            IconButton(onClick = { onContinuar(activa.id, activa.planId) }) {
+                                Icon(Icons.Default.Edit, contentDescription = "Continuar y editar entrenamiento")
+                            }
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        Button(onClick = { onContinuar(activa.id, activa.planId) }, Modifier.fillMaxWidth()) { Text("Continuar entrenamiento") }
+                    }
+                }
+            } else if (!configurado) {
                 Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(18.dp)) { Text("Configurá tu semana", style = MaterialTheme.typography.titleLarge); Text("Elegí qué plan querés hacer cada día y GymApp te mostrará automáticamente tu entrenamiento de hoy."); Spacer(Modifier.height(10.dp)); Button(onClick = onConfig) { Text("Configurar") } } }
+            } else if (planDeHoy.isBlank()) {
+                Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(18.dp)) { Text("Día libre", style = MaterialTheme.typography.titleLarge); Text("Hoy no tenés ningún plan asignado."); Spacer(Modifier.height(10.dp)); Button(onClick = onConfig) { Text("Cambiar planificación") } } }
             } else {
                 Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(18.dp)) { Text("Tu entrenamiento de hoy", style = MaterialTheme.typography.titleLarge); Text(nombrePlanHoy, style = MaterialTheme.typography.headlineSmall); Text("${ejerciciosDeHoy} ejercicios"); Spacer(Modifier.height(10.dp)); Button(onClick = { onEntrenar(planDeHoy) }, Modifier.fillMaxWidth()) { Icon(Icons.Default.PlayArrow, null); Spacer(Modifier.width(6.dp)); Text("Comenzar entrenamiento") } } }
             }

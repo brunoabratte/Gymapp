@@ -16,8 +16,8 @@ import androidx.navigation.navArgument
 
 import com.bruno.gymapp.data.ConfiguracionEntrenamiento
 import com.bruno.gymapp.data.local.AppDatabase
-import com.bruno.gymapp.data.local.entity.Ejercicio
 import com.bruno.gymapp.data.local.entity.PlanesPreconfigurados
+import com.bruno.gymapp.data.local.entity.Ejercicio
 import com.bruno.gymapp.data.repository.GymRepository
 
 import com.bruno.gymapp.ui.screens.exercises.EjerciciosScreen
@@ -136,6 +136,17 @@ fun GymAppNavHost(
             )
         }
 
+        composable(
+            route = "configuracion/{planId}",
+            arguments = listOf(navArgument("planId") { type = NavType.StringType })
+        ) { entry ->
+            ConfiguracionScreen(
+                config = config,
+                planInicial = entry.arguments?.getString("planId"),
+                onBack = { navController.popBackStack() }
+            )
+        }
+
 
         // ------------------------------------------------------------
         // EJERCICIOS
@@ -178,10 +189,15 @@ fun GymAppNavHost(
 
             PlanesScreen(
                 onPlanClick = { planId ->
+                    config.inicializarPlanHoy(planId)
 
                     navController.navigate(
                         "nueva_sesion/$planId"
                     )
+                },
+
+                onPlanificarClick = { planId ->
+                    navController.navigate("configuracion/$planId")
                 },
 
                 onBack = {
@@ -360,6 +376,10 @@ fun GymAppNavHost(
                     navController.navigate(
                         "historial/$sesionId"
                     )
+                },
+
+                onEditarSesion = { sesionId, planId ->
+                    navController.navigate("sesion/$sesionId/$planId")
                 },
 
                 onBack = {

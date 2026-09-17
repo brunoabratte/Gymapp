@@ -8,3 +8,5 @@ enum class CategoriaEjercicio {
     CARDIO,
     OTRO
 }
+
+typealias MovementCategory = CategoriaEjercicio

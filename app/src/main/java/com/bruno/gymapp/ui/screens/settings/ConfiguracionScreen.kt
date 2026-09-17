@@ -13,16 +13,49 @@ import com.bruno.gymapp.data.local.entity.PlanesPreconfigurados
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ConfiguracionScreen(config: ConfiguracionEntrenamiento, onBack: () -> Unit) {
-    val seleccion = remember { mutableStateMapOf<Int, String>().apply { for (i in 1..7) put(i, config.planParaDia(i)) } }
+fun ConfiguracionScreen(
+    config: ConfiguracionEntrenamiento,
+    planInicial: String? = null,
+    onBack: () -> Unit
+) {
+    var frecuencia by remember { mutableIntStateOf((1..7).count { config.planParaDia(it).isNotBlank() }.coerceIn(3, 5)) }
+    val seleccion = remember(planInicial) {
+        mutableStateMapOf<Int, String>().apply {
+            for (i in 1..7) put(i, planInicial ?: config.planParaDia(i))
+        }
+    }
+    LaunchedEffect(frecuencia) {
+        for (dia in (frecuencia + 1)..7) seleccion[dia] = ""
+    }
     Scaffold(topBar = { TopAppBar(title = { Text("Mi planificación") }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "Volver") } }) }) { padding ->
-        LazyColumn(Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LazyColumn(Modifier.fillMaxSize().padding(padding).padding(16.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item { Text("Elegí qué plan querés hacer cada día.", style = MaterialTheme.typography.titleMedium) }
+            item {
+                Text("Frecuencia semanal", style = MaterialTheme.typography.labelLarge)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(3, 4, 5).forEach { cantidad ->
+                        FilterChip(
+                            selected = frecuencia == cantidad,
+                            onClick = { frecuencia = cantidad },
+                            label = { Text("$cantidad días") }
+                        )
+                    }
+                }
+            }
+            if (planInicial != null) {
+                item {
+                    Text(
+                        "Plan seleccionado: ${ConfiguracionEntrenamiento.nombrePlan(planInicial)}. " +
+                                "Asignalo a los días que quieras.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
             items(7) { index ->
                 var expanded by remember { mutableStateOf(false) }
                 val actual = seleccion[index + 1] ?: ""
                 ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-                    OutlinedTextField(value = ConfiguracionEntrenamiento.dias[index] + " — " + ConfiguracionEntrenamiento.nombrePlan(actual), onValueChange = {}, readOnly = true, label = { Text("Entrenamiento") }, modifier = Modifier.fillMaxWidth().menuAnchor())
+                    OutlinedTextField(value = ConfiguracionEntrenamiento.dias[index] + " — " + ConfiguracionEntrenamiento.nombrePlan(actual), onValueChange = {}, readOnly = true, label = { Text(if (index < frecuencia) "Entrenamiento" else "Descanso") }, modifier = Modifier.fillMaxWidth().menuAnchor())
                     ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                         DropdownMenuItem(text = { Text("Descanso / libre") }, onClick = { seleccion[index + 1] = ""; expanded = false })
                         PlanesPreconfigurados.todos.forEach { plan -> DropdownMenuItem(text = { Text(plan.nombre) }, onClick = { seleccion[index + 1] = plan.id; expanded = false }) }

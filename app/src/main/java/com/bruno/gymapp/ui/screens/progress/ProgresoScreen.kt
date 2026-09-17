@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,6 +28,10 @@ fun ProgresoScreen(viewModel: ProgresoViewModel, onBack: () -> Unit) {
     var popupCerrado by remember { mutableStateOf(false) }
 
     val progresoActual = progreso
+    val formato = remember { SimpleDateFormat("EEEE d 'de' MMMM", Locale.getDefault()) }
+    val sesionesPorDia = progresoActual?.groupBy { punto ->
+        SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(punto.fechaEpochMillis))
+    }?.toList()?.asReversed() ?: emptyList()
     if (progresoActual != null && progresoActual.isEmpty() && !popupCerrado) {
         AlertDialog(
             onDismissRequest = { popupCerrado = true },
@@ -49,42 +55,51 @@ fun ProgresoScreen(viewModel: ProgresoViewModel, onBack: () -> Unit) {
             if (progresoActual == null) {
                 // Todavía no llegó el primer dato de la base: no mostramos nada para evitar el parpadeo.
             } else if (progresoActual.isEmpty()) {
-                Box(
-                    Modifier.fillMaxWidth().padding(top = 32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("Todavía no cargaste series de este ejercicio.")
-                }
+                Box(Modifier.fillMaxSize())
             } else {
-                Text("Peso (kg) por serie cargada", style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(12.dp))
-                GraficoPeso(
-                    progresoActual,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                )
-                Spacer(Modifier.height(24.dp))
-                Text("Detalle", style = MaterialTheme.typography.titleMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.ShowChart, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Text("Evolución de carga", style = MaterialTheme.typography.titleMedium)
+                }
+                Spacer(Modifier.height(10.dp))
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    GraficoPeso(
+                        progresoActual,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
+                            .padding(16.dp)
+                    )
+                }
+                Spacer(Modifier.height(20.dp))
+                Text("Sesiones por día", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(8.dp))
-
-                val formato = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
 
                 LazyColumn(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(bottom = 8.dp)
                 ) {
-                    items(progresoActual.reversed()) { punto ->
+                    items(sesionesPorDia) { (fecha, puntos) ->
                         Card(modifier = Modifier.fillMaxWidth()) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(formato.format(Date(punto.fechaEpochMillis)))
-                                Text("${punto.pesoKg} kg × ${punto.repeticiones}")
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Icon(Icons.Default.CalendarToday, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                    Text(
+                                        formato.format(Date(puntos.first().fechaEpochMillis)).replaceFirstChar { it.uppercase() },
+                                        style = MaterialTheme.typography.titleSmall
+                                    )
+                                }
+                                Spacer(Modifier.height(8.dp))
+                                puntos.forEach { punto ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text("Serie registrada")
+                                        Text("${punto.pesoKg} kg × ${punto.repeticiones}")
+                                    }
+                                }
                             }
                         }
                     }

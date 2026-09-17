@@ -1,6 +1,7 @@
 package com.bruno.gymapp.ui.screens.exercises
 
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -38,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,8 +52,9 @@ import com.bruno.gymapp.data.local.entity.CategoriaEjercicio
 import com.bruno.gymapp.data.local.entity.Ejercicio
 import com.bruno.gymapp.data.local.entity.GrupoMuscular
 import com.bruno.gymapp.data.local.entity.TipoEjercicio
+import kotlinx.coroutines.flow.first
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun EjerciciosScreen(
     viewModel: EjerciciosViewModel,
@@ -70,14 +74,30 @@ fun EjerciciosScreen(
         mutableStateOf(false)
     }
 
-    val ejerciciosFiltrados =
-        if (categoriaSeleccionada == null) {
-            ejercicios
+    var ejercicioPendiente by remember {
+        mutableStateOf<Ejercicio?>(null)
+    }
+
+    var ejercicioSinDatos by remember {
+        mutableStateOf<Ejercicio?>(null)
+    }
+
+    LaunchedEffect(ejercicioPendiente?.id) {
+        val ejercicio = ejercicioPendiente ?: return@LaunchedEffect
+        val progreso = viewModel.observarProgreso(ejercicio.id).first()
+        ejercicioPendiente = null
+        if (progreso.isEmpty()) {
+            ejercicioSinDatos = ejercicio
         } else {
-            ejercicios.filter {
-                it.categoria == categoriaSeleccionada
-            }
+            onEjercicioClick(ejercicio)
         }
+    }
+
+    val secciones = remember(ejercicios, categoriaSeleccionada) {
+        viewModel.agruparPorSubcategoria(ejercicios, categoriaSeleccionada)
+            .toList()
+            .sortedBy { it.first.ordinal }
+    }
 
     Scaffold(
 
@@ -138,7 +158,8 @@ fun EjerciciosScreen(
 
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
+                .padding(padding)
+                .imePadding(),
 
             contentPadding = PaddingValues(16.dp),
 
@@ -216,22 +237,28 @@ fun EjerciciosScreen(
                 )
             }
 
-            items(
-
-                items = ejerciciosFiltrados,
-
-                key = {
-                    it.id
+            secciones.forEach { (subCategoria, ejerciciosDeSubcategoria) ->
+                stickyHeader(key = "subcategoria_${subCategoria.name}") {
+                    Text(
+                        text = subCategoria.label,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
-
-            ) { ejercicio ->
+                items(
+                    items = ejerciciosDeSubcategoria,
+                    key = { it.id }
+                ) { ejercicio ->
 
                 Card(
 
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            onEjercicioClick(ejercicio)
+                            ejercicioPendiente = ejercicio
                         }
                 ) {
 
@@ -302,6 +329,7 @@ fun EjerciciosScreen(
                         )
                     }
                 }
+                }
             }
         }
     }
@@ -333,6 +361,25 @@ fun EjerciciosScreen(
             }
         )
     }
+
+    ejercicioSinDatos?.let { ejercicio ->
+        AlertDialog(
+            onDismissRequest = { ejercicioSinDatos = null },
+            title = { Text("Sin datos todavía") },
+            text = {
+                Text(
+                    "No hay series registradas para ${ejercicio.nombre}. " +
+                            "Registralo desde una sesión de entrenamiento."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { ejercicioSinDatos = null }) {
+                    Text("Entendido")
+                }
+            }
+        )
+    }
+
 }
 
 

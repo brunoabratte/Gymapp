@@ -3,8 +3,10 @@ package com.bruno.gymapp.data.local.dao
 import androidx.room.*
 import com.bruno.gymapp.data.local.entity.SerieRegistrada
 import kotlinx.coroutines.flow.Flow
+import androidx.compose.runtime.Immutable
 
 // Fila de resultado para el gráfico/tabla de progreso de un ejercicio en el tiempo
+@Immutable
 data class PuntoProgreso(
     val fechaEpochMillis: Long,
     val pesoKg: Double,
@@ -44,6 +46,18 @@ interface SerieDao {
         """
     )
     fun observarProgreso(ejercicioId: Long): Flow<List<PuntoProgreso>>
+
+    @Query(
+        """
+        SELECT s.fechaEpochMillis AS fechaEpochMillis, sr.pesoKg AS pesoKg, sr.repeticiones AS repeticiones
+        FROM series_registradas sr
+        INNER JOIN sesiones s ON s.id = sr.sesionId
+        WHERE sr.ejercicioId = :ejercicioId AND s.estado = 'COMPLETED'
+        ORDER BY s.fechaEpochMillis DESC, sr.orden DESC
+        LIMIT 1
+        """
+    )
+    fun observarUltimoRegistro(ejercicioId: Long): Flow<PuntoProgreso?>
 
     // Para el historial: cuántas series se cargaron en cada sesión
     @Query(

@@ -5,9 +5,13 @@ import androidx.lifecycle.viewModelScope
 import com.bruno.gymapp.data.local.entity.Ejercicio
 import com.bruno.gymapp.data.local.entity.SerieRegistrada
 import com.bruno.gymapp.data.local.entity.PlanesPreconfigurados
+import com.bruno.gymapp.data.local.entity.PrescripcionEjercicio
+import com.bruno.gymapp.data.local.entity.prescripcionPara
 import com.bruno.gymapp.data.local.entity.TipoEjercicio
+import com.bruno.gymapp.data.local.dao.PuntoProgreso
 import com.bruno.gymapp.data.repository.GymRepository
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -15,8 +19,11 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.collections.immutable.persistentListOf
+import androidx.compose.runtime.Immutable
 
 // Fila ya lista para mostrar en la lista de series cargadas (con el nombre del ejercicio resuelto)
+@Immutable
 data class SerieUi(
     val id: Long,
     val nombreEjercicio: String,
@@ -34,7 +41,7 @@ class SesionViewModel(
     private val plan = if (planId == "libre") {
         PlanesPreconfigurados.porId("hipertrofia").copy(
             nombre = "Entrenamiento libre",
-            ejercicios = emptyList(),
+            ejercicios = persistentListOf<String>(),
             descansoCompuesto = DESCANSO_POR_DEFECTO_SEGUNDOS,
             descansoBasico = 90,
             descansoAislamiento = 60
@@ -77,7 +84,7 @@ class SesionViewModel(
     private var timerJob: kotlinx.coroutines.Job? = null
 
     fun agregarSerie(ejercicioId: Long, pesoKg: Double, repeticiones: Int) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val ordenSiguiente = seriesCrudas.value.count { it.ejercicioId == ejercicioId } + 1
             repo.registrarSerie(
                 SerieRegistrada(
@@ -94,20 +101,25 @@ class SesionViewModel(
     }
 
     fun editarSerie(serieId: Long, pesoKg: Double, repeticiones: Int) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val original = seriesCrudas.value.find { it.id == serieId } ?: return@launch
             repo.actualizarSerie(original.copy(pesoKg = pesoKg, repeticiones = repeticiones))
         }
     }
 
     fun eliminarSerie(serieId: Long) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val original = seriesCrudas.value.find { it.id == serieId } ?: return@launch
             repo.eliminarSerie(original)
         }
     }
 
     fun descansoPara(ejercicio: Ejercicio): String = "${restFor(ejercicio.id) / 60}:${(restFor(ejercicio.id) % 60).toString().padStart(2, '0')}"
+
+    fun prescripcionPara(ejercicio: Ejercicio): PrescripcionEjercicio = plan.prescripcionPara(ejercicio.tipo)
+
+    fun observarUltimoRegistro(ejercicioId: Long): kotlinx.coroutines.flow.Flow<PuntoProgreso?> =
+        repo.observarUltimoRegistro(ejercicioId)
 
     private fun restFor(ejercicioId: Long): Int {
         val ejercicio = ejercicios.value.firstOrNull { it.id == ejercicioId } ?: return DESCANSO_POR_DEFECTO_SEGUNDOS
@@ -172,7 +184,7 @@ class SesionViewModel(
 
     // Busca la sesión actual (para no pisar su fecha original) y calcula cuántos minutos pasaron desde que arrancó.
     fun finalizarSesion() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val actual = repo.observarSesiones().first().find { it.id == sesionId } ?: return@launch
             val minutos = ((System.currentTimeMillis() - actual.fechaEpochMillis) / 60000).toInt().coerceAtLeast(0)
             repo.finalizarSesion(actual.copy(duracionMinutos = minutos))

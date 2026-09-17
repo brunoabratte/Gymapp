@@ -15,7 +15,11 @@ import com.bruno.gymapp.data.local.entity.PlanesPreconfigurados
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PlanesScreen(onPlanClick: (String) -> Unit, onBack: () -> Unit) {
+fun PlanesScreen(
+    onPlanClick: (String) -> Unit,
+    onPlanificarClick: (String) -> Unit,
+    onBack: () -> Unit
+) {
     Scaffold(topBar = { TopAppBar(title = { Text("Elegí tu plan") }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "Volver") } }) }) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
@@ -28,14 +32,22 @@ fun PlanesScreen(onPlanClick: (String) -> Unit, onBack: () -> Unit) {
                 Text("Elegí una preconfiguración. Podrás personalizarla más adelante.")
             }
             items(PlanesPreconfigurados.todos) { plan ->
-                PlanCard(plan = plan, onClick = { onPlanClick(plan.id) })
+                PlanCard(
+                    plan = plan,
+                    onClick = { onPlanClick(plan.id) },
+                    onPlanificar = { onPlanificarClick(plan.id) }
+                )
             }
         }
     }
 }
 
 @Composable
-private fun PlanCard(plan: PlanPreconfigurado, onClick: () -> Unit) {
+private fun PlanCard(
+    plan: PlanPreconfigurado,
+    onClick: () -> Unit,
+    onPlanificar: () -> Unit
+) {
     Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         Column(Modifier.padding(16.dp)) {
             Text(plan.nombre, style = MaterialTheme.typography.titleLarge)
@@ -45,6 +57,10 @@ private fun PlanCard(plan: PlanPreconfigurado, onClick: () -> Unit) {
             HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
             Text("Descansos automáticos", style = MaterialTheme.typography.labelLarge)
             Text("Compuesto: ${plan.descansoCompuesto}s · Básico: ${plan.descansoBasico}s · Aislamiento: ${plan.descansoAislamiento}s", style = MaterialTheme.typography.bodySmall)
+            Spacer(Modifier.height(10.dp))
+            OutlinedButton(onClick = onPlanificar, modifier = Modifier.fillMaxWidth()) {
+                Text("Elegir plan y configurar días")
+            }
         }
     }
 }

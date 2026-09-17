@@ -15,6 +15,10 @@ class ConfiguracionEntrenamiento(context: Context) {
     fun planDelDia(): String = prefs.getString("dia_${diaActual()}", "") ?: ""
     fun planParaDia(dia: Int): String = prefs.getString("dia_$dia", "") ?: ""
     fun guardarPlanDia(dia: Int, planId: String) { prefs.edit().putString("dia_$dia", planId).apply() }
+    fun inicializarPlanHoy(planId: String) {
+        guardarPlanDia(diaActual(), planId)
+        guardarConfigurado()
+    }
     fun guardarConfigurado(valor: Boolean = true) {
         prefs.edit().putBoolean("configurado", valor).apply()
         _cambios.value += 1

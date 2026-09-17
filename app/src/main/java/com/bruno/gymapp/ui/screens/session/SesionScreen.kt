@@ -7,6 +7,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Replay
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import android.os.Build
@@ -16,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.bruno.gymapp.data.local.entity.Ejercicio
+import kotlinx.coroutines.flow.first
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,11 +58,28 @@ fun SesionScreen(
     var pesoTexto by remember { mutableStateOf("") }
     var repsTexto by remember { mutableStateOf("") }
     var menuExpandido by remember { mutableStateOf(false) }
+    var seriesObjetivo by remember { mutableIntStateOf(0) }
+    var repeticionesObjetivo by remember { mutableStateOf("") }
+    var ultimoRegistro by remember { mutableStateOf<com.bruno.gymapp.data.local.dao.PuntoProgreso?>(null) }
+    var serieEnEdicion by remember { mutableStateOf<SerieUi?>(null) }
+
+    LaunchedEffect(ejercicioSeleccionado?.id) {
+        ultimoRegistro = ejercicioSeleccionado?.let { viewModel.observarUltimoRegistro(it.id).first() }
+        ultimoRegistro?.let {
+            pesoTexto = it.pesoKg.toString()
+            repsTexto = it.repeticiones.toString()
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(viewModel.nombrePlan) },
+                title = {
+                    Column {
+                        Text("Entrenamiento", style = MaterialTheme.typography.labelMedium)
+                        Text(viewModel.nombrePlan, style = MaterialTheme.typography.titleMedium)
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
@@ -72,28 +96,43 @@ fun SesionScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
+                    .navigationBarsPadding()
+                    .imePadding()
             ) {
                 Text("Finalizar sesión")
             }
         }
     ) { padding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
+                .imePadding()
+                .navigationBarsPadding(),
+            contentPadding = PaddingValues(bottom = 16.dp)
         ) {
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(padding)
+                        .padding(16.dp)
+                ) {
             if (segundosDescanso > 0) {
-                Card(modifier = Modifier.fillMaxWidth()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                ) {
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(16.dp),
                         horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
                     ) {
-                        Text("Descanso", style = MaterialTheme.typography.titleMedium)
+                        Icon(Icons.Default.Timer, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                        Text("Descanso activo", style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.height(4.dp))
                         Text(
                             text = "%d:%02d".format(segundosDescanso / 60, segundosDescanso % 60),
-                            style = MaterialTheme.typography.headlineLarge
+                            style = MaterialTheme.typography.displaySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -103,9 +142,15 @@ fun SesionScreen(
                                     else viewModel.pausarDescanso()
                                 }
                             ) {
+                                Icon(if (timerPausado) Icons.Default.PlayArrow else Icons.Default.Pause, contentDescription = null)
+                                Spacer(Modifier.width(6.dp))
                                 Text(if (timerPausado) "Continuar" else "Pausar")
                             }
-                            OutlinedButton(onClick = { viewModel.reiniciarDescanso() }) { Text("Reiniciar") }
+                            OutlinedButton(onClick = { viewModel.reiniciarDescanso() }) {
+                                Icon(Icons.Default.Replay, contentDescription = null)
+                                Spacer(Modifier.width(6.dp))
+                                Text("Reiniciar")
+                            }
                         }
                     }
                 }
@@ -124,7 +169,12 @@ fun SesionScreen(
                 Spacer(Modifier.height(12.dp))
             }
 
-            Text("Plan: ${viewModel.nombrePlan}", style = MaterialTheme.typography.labelLarge)
+            Text("Siguiente ejercicio", style = MaterialTheme.typography.titleLarge)
+            Text(
+                "Registrá una serie y el descanso se iniciará automáticamente.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Spacer(Modifier.height(8.dp))
 
             // Selector de ejercicio
@@ -139,7 +189,8 @@ fun SesionScreen(
                     label = { Text("Ejercicio") },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .menuAnchor()
+                        .menuAnchor(),
+                    leadingIcon = { Icon(Icons.Default.FitnessCenter, contentDescription = null) }
                 )
                 ExposedDropdownMenu(
                     expanded = menuExpandido,
@@ -150,6 +201,9 @@ fun SesionScreen(
                             text = { Text(ejercicio.nombre) },
                             onClick = {
                                 ejercicioSeleccionado = ejercicio
+                                val prescripcion = viewModel.prescripcionPara(ejercicio)
+                                seriesObjetivo = prescripcion.series
+                                repeticionesObjetivo = prescripcion.repeticiones
                                 menuExpandido = false
                             }
                         )
@@ -158,6 +212,54 @@ fun SesionScreen(
             }
 
             Spacer(Modifier.height(12.dp))
+
+            if (ejercicioSeleccionado != null) {
+                val prescripcion = viewModel.prescripcionPara(ejercicioSeleccionado!!)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                ) {
+                    Column(Modifier.padding(12.dp)) {
+                        Text("Recomendación para este ejercicio", style = MaterialTheme.typography.labelLarge)
+                        Text(
+                            "${prescripcion.series} series · ${prescripcion.repeticiones} repeticiones",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(prescripcion.objetivo, style = MaterialTheme.typography.bodySmall)
+                        Spacer(Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = seriesObjetivo.toString(),
+                                onValueChange = { seriesObjetivo = it.toIntOrNull()?.coerceIn(1, 20) ?: seriesObjetivo },
+                                label = { Text("Series") },
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
+                                modifier = Modifier.weight(1f)
+                            )
+                            OutlinedTextField(
+                                value = repeticionesObjetivo,
+                                onValueChange = { repeticionesObjetivo = it },
+                                label = { Text("Repeticiones") },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        Text("Podés modificar esta recomendación para esta sesión.", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Descanso sugerido: ${viewModel.descansoPara(ejercicioSeleccionado!!)}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                ultimoRegistro?.let {
+                    Text(
+                        "Referencia anterior: ${it.pesoKg} kg × ${it.repeticiones} (${java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault()).format(java.util.Date(it.fechaEpochMillis))})",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+            }
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
@@ -193,11 +295,16 @@ fun SesionScreen(
                 enabled = ejercicioSeleccionado != null && pesoTexto.isNotBlank() && repsTexto.isNotBlank(),
                 modifier = Modifier.fillMaxWidth()
             ) {
+                Icon(Icons.Default.CheckCircle, contentDescription = null)
+                Spacer(Modifier.width(6.dp))
                 Text("Agregar serie")
             }
 
             Spacer(Modifier.height(16.dp))
-            Text("Series de hoy", style = MaterialTheme.typography.titleMedium)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Series de hoy", style = MaterialTheme.typography.titleMedium)
+                Text("${series.size}", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            }
             Text(
                 "Tocá una serie para editarla o borrarla",
                 style = MaterialTheme.typography.bodySmall,
@@ -205,48 +312,45 @@ fun SesionScreen(
             )
             Spacer(Modifier.height(8.dp))
 
-            var serieEnEdicion by remember { mutableStateOf<SerieUi?>(null) }
-
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(bottom = 8.dp)
-            ) {
-                items(series) { serie ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { serieEnEdicion = serie }
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("${serie.nombreEjercicio} · serie ${serie.orden}")
-                            Text("${serie.pesoKg} kg × ${serie.repeticiones}")
-                        }
-                    }
                 }
             }
 
-            serieEnEdicion?.let { serie ->
-                DialogoEditarSerie(
-                    serie = serie,
-                    onGuardar = { peso, reps ->
-                        viewModel.editarSerie(serie.id, peso, reps)
-                        serieEnEdicion = null
-                    },
-                    onEliminar = {
-                        viewModel.eliminarSerie(serie.id)
-                        serieEnEdicion = null
-                    },
-                    onCancelar = { serieEnEdicion = null }
-                )
+            items(
+                items = series,
+                key = { it.id }
+            ) { serie ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .clickable { serieEnEdicion = serie }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("${serie.nombreEjercicio} · serie ${serie.orden}")
+                        Text("${serie.pesoKg} kg × ${serie.repeticiones}")
+                    }
+                }
             }
+        }
+
+        serieEnEdicion?.let { serie ->
+            DialogoEditarSerie(
+                serie = serie,
+                onGuardar = { peso, reps ->
+                    viewModel.editarSerie(serie.id, peso, reps)
+                    serieEnEdicion = null
+                },
+                onEliminar = {
+                    viewModel.eliminarSerie(serie.id)
+                    serieEnEdicion = null
+                },
+                onCancelar = { serieEnEdicion = null }
+            )
         }
     }
 }

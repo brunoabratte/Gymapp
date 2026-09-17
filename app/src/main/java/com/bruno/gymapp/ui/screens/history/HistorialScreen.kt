@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,6 +21,7 @@ import java.util.Locale
 fun HistorialScreen(
     viewModel: HistorialViewModel,
     onSesionClick: (Long) -> Unit,
+    onEditarSesion: (Long, String) -> Unit,
     onBack: () -> Unit
 ) {
     val sesiones by viewModel.sesiones.collectAsState()
@@ -62,6 +64,14 @@ fun HistorialScreen(
                                     (sesion.duracionMinutos?.let { " · $it min" } ?: ""),
                                 style = MaterialTheme.typography.bodySmall
                             )
+                            if (sesion.estado != com.bruno.gymapp.data.local.entity.EstadoSesion.COMPLETED) {
+                                Text("Sesión en curso", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium)
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                IconButton(onClick = { onEditarSesion(sesion.sesionId, sesion.planId) }) {
+                                    Icon(Icons.Default.Edit, contentDescription = "Continuar o editar sesión")
+                                }
+                            }
                         }
                     }
                 }
