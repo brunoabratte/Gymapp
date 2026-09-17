@@ -30,6 +30,10 @@ class GymRepository(db: AppDatabase) {
 
     suspend fun registrarSerie(serie: SerieRegistrada): Long = serieDao.insertar(serie)
 
+    suspend fun actualizarSerie(serie: SerieRegistrada) = serieDao.actualizar(serie)
+
+    suspend fun eliminarSerie(serie: SerieRegistrada) = serieDao.eliminar(serie)
+
     fun observarSeriesDeSesion(sesionId: Long): Flow<List<SerieRegistrada>> =
         serieDao.observarPorSesion(sesionId)
 

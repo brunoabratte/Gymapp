@@ -3,6 +3,8 @@ package com.bruno.gymapp.ui.screens.settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -11,9 +13,9 @@ import com.bruno.gymapp.data.local.entity.PlanesPreconfigurados
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ConfiguracionScreen(config: ConfiguracionEntrenamiento, onGuardar: () -> Unit) {
+fun ConfiguracionScreen(config: ConfiguracionEntrenamiento, onBack: () -> Unit) {
     val seleccion = remember { mutableStateMapOf<Int, String>().apply { for (i in 1..7) put(i, config.planParaDia(i)) } }
-    Scaffold(topBar = { TopAppBar(title = { Text("Mi planificación") }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text("Mi planificación") }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "Volver") } }) }) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item { Text("Elegí qué plan querés hacer cada día.", style = MaterialTheme.typography.titleMedium) }
             items(7) { index ->
@@ -29,7 +31,11 @@ fun ConfiguracionScreen(config: ConfiguracionEntrenamiento, onGuardar: () -> Uni
             }
             item {
                 Spacer(Modifier.height(8.dp))
-                Button(onClick = { for (i in 1..7) config.guardarPlanDia(i, seleccion[i] ?: ""); config.guardarConfigurado(); onGuardar() }, modifier = Modifier.fillMaxWidth()) { Text("Guardar planificación") }
+                Button(onClick = {
+                    for (i in 1..7) config.guardarPlanDia(i, seleccion[i] ?: "")
+                    config.guardarConfigurado()
+                    onBack()
+                }, modifier = Modifier.fillMaxWidth()) { Text("Guardar planificación") }
             }
         }
     }

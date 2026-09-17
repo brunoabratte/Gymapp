@@ -17,8 +17,16 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(viewModel: HomeViewModel, onEntrenar: (String) -> Unit, onContinuar: (Long, String) -> Unit, onConfig: () -> Unit, onEjercicios: () -> Unit, onHistorial: () -> Unit, onProgreso: () -> Unit) {
-    val sesiones = viewModel.sesiones.value
+fun HomeScreen(
+    viewModel: HomeViewModel,
+    onEntrenar: (String) -> Unit,
+    onContinuar: (Long, String) -> Unit,
+    onConfig: () -> Unit,
+    onEjercicios: () -> Unit,
+    onHistorial: () -> Unit,
+    onProgreso: () -> Unit
+) {
+    val sesiones by viewModel.sesiones.collectAsState()
     val activa = viewModel.sesionEnCurso.collectAsState().value
     val totalSeries by viewModel.cantidadTotalSeries.collectAsState()
     val planDeHoy by viewModel.planDeHoy.collectAsState()
@@ -26,10 +34,35 @@ fun HomeScreen(viewModel: HomeViewModel, onEntrenar: (String) -> Unit, onContinu
     val nombrePlanHoy by viewModel.nombrePlanHoy.collectAsState()
     val ejerciciosDeHoy by viewModel.ejerciciosDeHoy.collectAsState()
     val fecha = rememberHoy()
-    Scaffold(topBar = { TopAppBar(title = { Text("GymApp") }, actions = { IconButton(onClick = onConfig) { Icon(Icons.Default.Settings, "Configuración") } }) }, bottomBar = {
-        NavigationBar { NavigationBarItem(true, { onConfig() }, { Icon(Icons.Default.Settings, null) }, label = { Text("Config") }); NavigationBarItem(false, { onEjercicios() }, { Icon(Icons.Default.FitnessCenter, null) }, label = { Text("Ejercicios") }); NavigationBarItem(false, { onHistorial() }, { Icon(Icons.Default.History, null) }, label = { Text("Historial") }) }
+    Scaffold(topBar = { TopAppBar(title = { Text("GymApp") }, actions = { IconButton(onClick = onConfig) { Icon(Icons.Default.Settings, contentDescription = "Configuración") } }) }, bottomBar = {
+        NavigationBar {
+            NavigationBarItem(
+                selected = true,
+                onClick = {},
+                icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                label = { Text("Inicio") }
+            )
+            NavigationBarItem(
+                selected = false,
+                onClick = onEjercicios,
+                icon = { Icon(Icons.Default.FitnessCenter, contentDescription = null) },
+                label = { Text("Ejercicios") }
+            )
+            NavigationBarItem(
+                selected = false,
+                onClick = onHistorial,
+                icon = { Icon(Icons.Default.History, contentDescription = null) },
+                label = { Text("Historial") }
+            )
+        }
     }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
             Text("Hola 👋", style = MaterialTheme.typography.headlineMedium)
             Text(fecha, style = MaterialTheme.typography.bodyMedium)
             if (activa != null) {

@@ -23,6 +23,12 @@ interface SerieDao {
     @Insert
     suspend fun insertar(serie: SerieRegistrada): Long
 
+    @Update
+    suspend fun actualizar(serie: SerieRegistrada)
+
+    @Delete
+    suspend fun eliminar(serie: SerieRegistrada)
+
     @Query("SELECT * FROM series_registradas WHERE sesionId = :sesionId ORDER BY orden ASC")
     fun observarPorSesion(sesionId: Long): Flow<List<SerieRegistrada>>
 
@@ -47,8 +53,8 @@ interface SerieDao {
         GROUP BY sesionId
         """
     )
+    fun observarConteoPorSesion(): Flow<List<ConteoPorSesion>>
+
     @Query("SELECT COUNT(*) FROM series_registradas")
     fun observarCantidadTotal(): Flow<Int>
-
-    fun observarConteoPorSesion(): Flow<List<ConteoPorSesion>>
 }

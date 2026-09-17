@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,12 +20,25 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProgresoScreen(viewModel: ProgresoViewModel) {
+fun ProgresoScreen(viewModel: ProgresoViewModel, onBack: () -> Unit) {
     val ejercicio by viewModel.ejercicio.collectAsState()
     val progreso by viewModel.progreso.collectAsState()
+    var popupCerrado by remember { mutableStateOf(false) }
+
+    val progresoActual = progreso
+    if (progresoActual != null && progresoActual.isEmpty() && !popupCerrado) {
+        AlertDialog(
+            onDismissRequest = { popupCerrado = true },
+            title = { Text("Sin datos todavía") },
+            text = { Text("No hay series cargadas para ${ejercicio?.nombre ?: "este ejercicio"}. Registralas desde una sesión de entrenamiento.") },
+            confirmButton = {
+                TextButton(onClick = { popupCerrado = true }) { Text("Entendido") }
+            }
+        )
+    }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(ejercicio?.nombre ?: "Progreso") }) }
+        topBar = { TopAppBar(title = { Text(ejercicio?.nombre ?: "Progreso") }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, contentDescription = "Volver") } }) }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -31,7 +46,9 @@ fun ProgresoScreen(viewModel: ProgresoViewModel) {
                 .padding(padding)
                 .padding(16.dp)
         ) {
-            if (progreso.isEmpty()) {
+            if (progresoActual == null) {
+                // Todavía no llegó el primer dato de la base: no mostramos nada para evitar el parpadeo.
+            } else if (progresoActual.isEmpty()) {
                 Box(
                     Modifier.fillMaxWidth().padding(top = 32.dp),
                     contentAlignment = Alignment.Center
@@ -42,7 +59,7 @@ fun ProgresoScreen(viewModel: ProgresoViewModel) {
                 Text("Peso (kg) por serie cargada", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(12.dp))
                 GraficoPeso(
-                    progreso,
+                    progresoActual,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(200.dp)
@@ -53,8 +70,12 @@ fun ProgresoScreen(viewModel: ProgresoViewModel) {
 
                 val formato = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
 
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(progreso.reversed()) { punto ->
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = 8.dp)
+                ) {
+                    items(progresoActual.reversed()) { punto ->
                         Card(modifier = Modifier.fillMaxWidth()) {
                             Row(
                                 modifier = Modifier

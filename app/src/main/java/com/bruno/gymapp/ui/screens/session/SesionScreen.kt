@@ -1,9 +1,12 @@
 package com.bruno.gymapp.ui.screens.session
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import android.os.Build
@@ -18,7 +21,8 @@ import com.bruno.gymapp.data.local.entity.Ejercicio
 @Composable
 fun SesionScreen(
     viewModel: SesionViewModel,
-    onFinalizar: () -> Unit
+    onFinalizar: () -> Unit,
+    onBack: () -> Unit
 ) {
     val ejercicios by viewModel.ejercicios.collectAsState()
     val series by viewModel.series.collectAsState()
@@ -49,7 +53,16 @@ fun SesionScreen(
     var menuExpandido by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text(viewModel.nombrePlan) }) },
+        topBar = {
+            TopAppBar(
+                title = { Text(viewModel.nombrePlan) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                    }
+                }
+            )
+        },
         bottomBar = {
             Button(
                 onClick = {
@@ -185,11 +198,28 @@ fun SesionScreen(
 
             Spacer(Modifier.height(16.dp))
             Text("Series de hoy", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Tocá una serie para editarla o borrarla",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Spacer(Modifier.height(8.dp))
 
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            var serieEnEdicion by remember { mutableStateOf<SerieUi?>(null) }
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(bottom = 8.dp)
+            ) {
                 items(series) { serie ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { serieEnEdicion = serie }
+                    ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -202,6 +232,68 @@ fun SesionScreen(
                     }
                 }
             }
+
+            serieEnEdicion?.let { serie ->
+                DialogoEditarSerie(
+                    serie = serie,
+                    onGuardar = { peso, reps ->
+                        viewModel.editarSerie(serie.id, peso, reps)
+                        serieEnEdicion = null
+                    },
+                    onEliminar = {
+                        viewModel.eliminarSerie(serie.id)
+                        serieEnEdicion = null
+                    },
+                    onCancelar = { serieEnEdicion = null }
+                )
+            }
         }
     }
+}
+
+@Composable
+fun DialogoEditarSerie(
+    serie: SerieUi,
+    onGuardar: (Double, Int) -> Unit,
+    onEliminar: () -> Unit,
+    onCancelar: () -> Unit
+) {
+    var peso by remember { mutableStateOf(serie.pesoKg.toString()) }
+    var reps by remember { mutableStateOf(serie.repeticiones.toString()) }
+
+    AlertDialog(
+        onDismissRequest = onCancelar,
+        title = { Text("${serie.nombreEjercicio} · serie ${serie.orden}") },
+        text = {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = peso,
+                    onValueChange = { peso = it },
+                    label = { Text("Peso (kg)") },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.weight(1f)
+                )
+                OutlinedTextField(
+                    value = reps,
+                    onValueChange = { reps = it },
+                    label = { Text("Reps") },
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val pesoNum = peso.replace(",", ".").toDoubleOrNull()
+                val repsNum = reps.toIntOrNull()
+                if (pesoNum != null && repsNum != null) onGuardar(pesoNum, repsNum)
+            }) { Text("Guardar") }
+        },
+        dismissButton = {
+            Row {
+                TextButton(onClick = onEliminar) { Text("Eliminar") }
+                TextButton(onClick = onCancelar) { Text("Cancelar") }
+            }
+        }
+    )
 }

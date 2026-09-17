@@ -22,6 +22,7 @@ class ProgresoViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    val progreso: StateFlow<List<PuntoProgreso>> = repo.observarProgreso(ejercicioId)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    // null = todavía no llegó el primer dato desde la base; lista vacía = ya llegó y no hay series
+    val progreso: StateFlow<List<PuntoProgreso>?> = repo.observarProgreso(ejercicioId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 }

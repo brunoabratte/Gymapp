@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 
 // Fila ya lista para mostrar en la lista de series cargadas (con el nombre del ejercicio resuelto)
 data class SerieUi(
+    val id: Long,
     val nombreEjercicio: String,
     val pesoKg: Double,
     val repeticiones: Int,
@@ -54,6 +55,7 @@ class SesionViewModel(
     val series: StateFlow<List<SerieUi>> = combine(seriesCrudas, ejercicios) { series, ejercicios ->
         series.map { s ->
             SerieUi(
+                id = s.id,
                 nombreEjercicio = ejercicios.find { it.id == s.ejercicioId }?.nombre ?: "Ejercicio",
                 pesoKg = s.pesoKg,
                 repeticiones = s.repeticiones,
@@ -88,6 +90,20 @@ class SesionViewModel(
             )
 
             iniciarDescanso(restFor(ejercicioId))
+        }
+    }
+
+    fun editarSerie(serieId: Long, pesoKg: Double, repeticiones: Int) {
+        viewModelScope.launch {
+            val original = seriesCrudas.value.find { it.id == serieId } ?: return@launch
+            repo.actualizarSerie(original.copy(pesoKg = pesoKg, repeticiones = repeticiones))
+        }
+    }
+
+    fun eliminarSerie(serieId: Long) {
+        viewModelScope.launch {
+            val original = seriesCrudas.value.find { it.id == serieId } ?: return@launch
+            repo.eliminarSerie(original)
         }
     }
 
